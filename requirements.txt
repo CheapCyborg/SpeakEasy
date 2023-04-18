@@ -1,0 +1,10 @@
+openai
+yt-dlp
+pysrt
+python-decouple
+sounddevice
+numpy
+keyboard
+python-dotenv
+openai-whisper
+openai
