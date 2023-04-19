@@ -4,7 +4,11 @@ import numpy as np
 import wave
 import keyboard
 import time
+from dotenv import load_dotenv
 
+load_dotenv()
+
+HOTKEY = os.getenv("HOTKEY")
 
 # Set the output directory path
 output_directory = "./tmp" 
@@ -13,13 +17,13 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def record_audio(input_device, hotkey):
+def record_audio(input_device):
     # Initialize an empty list to store audio data
     audio_data = []
 
     # Define a callback function to record audio
     def callback(indata, frames, time, status):
-        if keyboard.is_pressed(hotkey):
+        if keyboard.is_pressed(HOTKEY):
             audio_data.append(indata.copy())
 
     # Set the recording parameters
@@ -32,12 +36,12 @@ def record_audio(input_device, hotkey):
     # Create an input stream with the callback function
     with sd.InputStream(samplerate=RATE, channels=CHANNELS, dtype=FORMAT, blocksize=CHUNK, callback=callback, device=input_device):
         # Wait for the hotkey to be pressed
-        print(f"Press and hold the '{hotkey}' key to start recording")
-        keyboard.wait(hotkey)
+        print(f"Press and hold the '{HOTKEY}' key to start recording")
+        keyboard.wait(HOTKEY)
 
         # Record audio while the hotkey is pressed
         print("Recording...")
-        while keyboard.is_pressed(hotkey):
+        while keyboard.is_pressed(HOTKEY):
             time.sleep(0.1)
         print("Finished recording\n")
 

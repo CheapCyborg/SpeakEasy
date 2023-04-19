@@ -16,4 +16,4 @@ def transcribe():
     with open(os.path.join(output_directory, "transcript.txt"), "w") as f:
         f.write(transcript_text)
     print(f"Transcript saved to {os.path.join(output_directory, 'transcript.txt')}\n")
-    return transcript
+    return transcript.text

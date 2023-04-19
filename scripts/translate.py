@@ -14,22 +14,29 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def translate_text(lang="JA"):
+def translate_text(transcription, target_lang="JA"):
     while True:
         user_input = input("Translate the transcription? (y/n): ")
         if user_input.lower() == 'y':
-            # Get the transcription from the recorded audio
-            with open("/tmp/transcript.txt", "r") as f:
-                transcription = f.read()
-
             # Translate the transcription
-            translation = translator.translate_text(transcription, target_lang=lang)
+            translations = translator.translate_text(transcription, target_lang=target_lang)
+            
+            # Check if translations is a list or TextResult object
+            if isinstance(translations, list):
+                translation = translations[0].text
+            else:
+                translation = translations.text
 
             # Write the translation to a text file
             with open(os.path.join(output_directory, "translation.txt"), "w", encoding='utf-8') as f:
-                f.write(translation.text)
+                f.write(translation)
 
             print(f"\nOriginal: {transcription}")
-            print(f"Translation: {translation.text}")
+            print(f"Translation: {translation}")
+            
+            if user_input.lower() == 'n':
+                break
             break
-    return translation.text
+    return translation
+
+

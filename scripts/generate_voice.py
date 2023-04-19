@@ -8,10 +8,8 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-async def generate_waifu(speaker=1):
+async def generate_waifu(translation, speaker=1):
     async with Client() as client:
-        with open("./tmp/translation.txt", "r", encoding="utf-8") as f:
-            translation = f.read()
         audio_query = await client.create_audio_query(
             translation, speaker=speaker
         )
