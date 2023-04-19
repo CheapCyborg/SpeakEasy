@@ -8,7 +8,7 @@ auth_key = os.getenv("DEEPL_API_KEY")
 translator = dl.Translator(auth_key)
 
 # Set the output directory path
-output_directory = "./tmp" 
+output_directory = "./tmp"
 
 # Create the output directory if it doesn't exist
 if not os.path.exists(output_directory):
@@ -20,12 +20,9 @@ def translate_text(transcription, target_lang="JA"):
         if user_input.lower() == 'y':
             # Translate the transcription
             translations = translator.translate_text(transcription, target_lang=target_lang)
-            
+
             # Check if translations is a list or TextResult object
-            if isinstance(translations, list):
-                translation = translations[0].text
-            else:
-                translation = translations.text
+            translation = translations[0].text if isinstance(translations, list) else translations.text
 
             # Write the translation to a text file
             with open(os.path.join(output_directory, "translation.txt"), "w", encoding='utf-8') as f:
@@ -33,10 +30,10 @@ def translate_text(transcription, target_lang="JA"):
 
             print(f"\nOriginal: {transcription}")
             print(f"Translation: {translation}")
-            
-            if user_input.lower() == 'n':
-                break
             break
+        elif user_input.lower() == 'n':
+            break
+        else:
+            print("Invalid input. Enter 'y' or 'n'")
+
     return translation
-
-
