@@ -1,8 +1,12 @@
 import openai
 import os
 
-# Path to save txt from transcription
-output_directory = "./tmp"
+# Set the output directory path
+output_directory = "./tmp" 
+
+# Create the output directory if it doesn't exist
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
 
 def transcribe():
     audio_file= open("./tmp/output.wav", "rb")
@@ -11,5 +15,5 @@ def transcribe():
     transcript_text = transcript.text
     with open(os.path.join(output_directory, "transcript.txt"), "w") as f:
         f.write(transcript_text)
-    print(f"Transcript saved to {os.path.join(output_directory, 'transcript.txt')}")
+    print(f"Transcript saved to {os.path.join(output_directory, 'transcript.txt')}\n")
     return transcript

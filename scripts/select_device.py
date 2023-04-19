@@ -37,5 +37,5 @@ def select_input_device():
         else:
             print("Invalid input. Enter 'y' or 'n'")
 
-    print(f"\nSelected input device: ({input_device}) {devices[input_device]['name']}\n\n")
+    print(f"Selected input device: ({input_device}) {devices[input_device]['name']}\n\n")
     return input_device

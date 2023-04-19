@@ -39,7 +39,7 @@ def record_audio(input_device, hotkey):
         print("Recording...")
         while keyboard.is_pressed(hotkey):
             time.sleep(0.1)
-        print("Finished recording")
+        print("Finished recording\n")
 
     # Concatenate the recorded audio chunks
     audio_data = np.vstack(audio_data)

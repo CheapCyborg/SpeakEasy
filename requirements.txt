@@ -6,5 +6,6 @@ sounddevice
 numpy
 keyboard
 python-dotenv
-openai-whisper
 openai
+deepl
+voicevox-client
