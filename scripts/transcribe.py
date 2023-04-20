@@ -1,5 +1,6 @@
 import openai
 import os
+import asyncio
 
 # Set the output directory path
 output_directory = "./tmp" 
@@ -8,12 +9,27 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def transcribe():
-    audio_file= open("./tmp/output.wav", "rb")
-    transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    # Write transcript to file
-    transcript_text = transcript.text
-    with open(os.path.join(output_directory, "transcript.txt"), "w") as f:
-        f.write(transcript_text)
-    print(f"Transcript saved to {os.path.join(output_directory, 'transcript.txt')}\n")
-    return transcript.text
+async def transcribe(audio_file_path):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _transcribe_blocking, audio_file_path)
+
+def _transcribe_blocking(audio_file_path):
+    try:
+        with open(audio_file_path, "rb") as audio_file:
+            # Check if the audio file exists
+            if not os.path.isfile(audio_file.name):
+                raise FileNotFoundError("Audio file not found")
+
+            transcript = openai.Audio.transcribe("whisper-1", audio_file)
+
+        # Write transcript to file
+        transcript_text = transcript.text
+        transcript_file_path = os.path.join(output_directory, "transcript.txt")
+        with open(transcript_file_path, "w") as f:
+            f.write(transcript_text)
+        print(f"Transcription saved to {transcript_file_path}")
+        return transcript.text
+    except FileNotFoundError:
+        print("Error: Audio file not found")
+    except Exception as e:
+        print(f"Error transcribing audio: {str(e)}")

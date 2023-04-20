@@ -1,9 +1,8 @@
 import os
 import sys
-import keyboard
-import asyncio
 import faulthandler
-   
+import asyncio
+
 faulthandler.enable()
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -12,34 +11,44 @@ from record_audio import record_audio
 from transcribe import transcribe
 from translate import translate_text
 from generate_voice import generate_waifu
-from gui import app_is_closing
 
-# main.py
 
-# main.py
+output_directory = "./tmp" 
+
+# Create the output directory if it doesn't exist
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
+
 async def main(input_device, output_device, status_queue=None):
-    while app_is_closing == False:
-        # Run the record_audio.py script to record audio using the chosen input device
-        print("Starting record_audio")
-        await record_audio(input_device, status_queue=status_queue)
-        print("Finished record_audio")
+    try:
+        successful_recording = await record_audio(input_device, status_queue=status_queue)
+        if successful_recording:
+            if status_queue:
+                status_queue.put("Transcribing audio...\n")
+            try:
+                transcription = await transcribe(os.path.join(output_directory, "output.wav"))
+                if status_queue:
+                    status_queue.put("Original text: " + transcription + "\n")
+            except FileNotFoundError:
+                if status_queue:
+                    status_queue.put("No transcription found\n")
 
-        # Get the transcription from the recorded audio
-        print("Starting transcribe")
-        transcription =  transcribe()
-        print("Finished transcribe")
+            if status_queue:
+                status_queue.put("Translating text...\n")
+            translated_text = await translate_text(transcription, status_queue=status_queue)
+            if status_queue:
+                status_queue.put(f"Translated text: {translated_text}\n")
 
-        # Translate the transcription
-        print("Starting translate_text")
-        translated_text =  translate_text(transcription, status_queue=status_queue)
-        print("Finished translate_text")
+            if status_queue:
+                status_queue.put("Generating voice...\n")
+            await generate_waifu(translated_text, speaker=1, output_device=output_device, status_queue=status_queue)
+            if status_queue:
+                status_queue.put(f"Generated voice for: {translated_text}\n")
 
-        # Generate voice from the translated text
-        print("Starting generate_waifu")
-        await generate_waifu(translated_text, output_device=output_device, status_queue=status_queue)
-        print("Finished generate_waifu")
+        else:
+            if status_queue:
+                status_queue.put("Recording was unsuccessful\n")
 
-        # Check if the user wants to quit the application
-        if keyboard.is_pressed('q'):
-            print("Goodbye! 😊")
-            break
+    except Exception as e:
+        if status_queue:
+            status_queue.put(f"Error in main loop: {str(e)}\n")

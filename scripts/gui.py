@@ -2,14 +2,18 @@ import sys
 import main
 import asyncio
 import sounddevice as sd
+import faulthandler
 
-from threading import Thread
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QComboBox, QPushButton, QPlainTextEdit
 from select_device import devices
 from queue import Queue
+import qasync
+from threading import Thread
 
 app_is_closing = False
 status_queue = Queue()
+faulthandler.enable()
 
 def populate_devices_dropdown(dropdown, device_type):
     default_device = sd.default.device[0] if device_type == "input" else sd.default.device[1]
@@ -31,9 +35,11 @@ def run_app():
     input_device = input_dropdown.currentData()
     output_device = output_dropdown.currentData()
 
-    # Run the main function asynchronously in a separate thread
-    thread = Thread(target=asyncio.run, args=(run_app_async(input_device, output_device),))
-    thread.start()
+    # Run the main function asynchronously
+    try:
+        asyncio.ensure_future(run_app_async(input_device, output_device))
+    except Exception as e:
+        status_queue.put(f"Error in run_app: {str(e)}\n")
 
     # Change the button text to "Cancel" and disable the input and output dropdowns
     start_button.setText("Cancel")
@@ -52,13 +58,14 @@ def cancel_app():
     reset_button.setEnabled(True)
 
 def update_status():
-    while not app_is_closing:
-        status = status_queue.get()
+    while not status_queue.empty():
+        status = status_queue.get_nowait()
         output_text.appendPlainText(status)
 
 def reset_to_default():
     input_dropdown.setCurrentIndex(input_dropdown.findData(sd.default.device[0]))
     output_dropdown.setCurrentIndex(output_dropdown.findData(sd.default.device[1]))
+
 
 def run_gui():
     global input_dropdown, output_dropdown, output_text, start_button, reset_button, window, app_is_closing
@@ -104,11 +111,17 @@ def run_gui():
 
     app_is_closing = False
 
-    # Start the update_status thread
-    status_thread = Thread(target=update_status)
-    status_thread.start()
+    # Create the QEventLoop
+    loop = qasync.QEventLoop(app)
+    asyncio.set_event_loop(loop)
 
-    sys.exit(app.exec())
+    # Set up a periodic function to update the status text
+    status_timer = QTimer()
+    status_timer.timeout.connect(update_status)
+    status_timer.start(100)  # 100ms interval
+
+    with loop:
+        sys.exit(loop.run_forever())
 
 if __name__ == "__main__":
     run_gui()
