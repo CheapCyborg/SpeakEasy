@@ -8,7 +8,7 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-async def transcribe():
+def transcribe():
     audio_file= open("./tmp/output.wav", "rb")
     transcript = openai.Audio.transcribe("whisper-1", audio_file)
     # Write transcript to file

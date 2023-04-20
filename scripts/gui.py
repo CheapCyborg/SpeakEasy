@@ -3,11 +3,13 @@ import main
 import asyncio
 import sounddevice as sd
 
-from PySide6.QtCore import QThread, Signal
+from threading import Thread
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QComboBox, QPushButton, QPlainTextEdit
 from select_device import devices
+from queue import Queue
 
 app_is_closing = False
+status_queue = Queue()
 
 def populate_devices_dropdown(dropdown, device_type):
     default_device = sd.default.device[0] if device_type == "input" else sd.default.device[1]
@@ -22,17 +24,15 @@ def populate_devices_dropdown(dropdown, device_type):
     # Set the current index of the dropdown to the default device
     dropdown.setCurrentIndex(dropdown.findData(default_device))
     
-async def run_app_async(input_device, output_device, app_is_closing):
-    await main.main(input_device, output_device, app_is_closing, update_status)
-
-from threading import Thread
+async def run_app_async(input_device, output_device):
+    await main.main(input_device, output_device, status_queue=status_queue)
 
 def run_app():
     input_device = input_dropdown.currentData()
     output_device = output_dropdown.currentData()
 
     # Run the main function asynchronously in a separate thread
-    thread = Thread(target=asyncio.run, args=(run_app_async(input_device, output_device, lambda: not app_is_closing),))
+    thread = Thread(target=asyncio.run, args=(run_app_async(input_device, output_device),))
     thread.start()
 
     # Change the button text to "Cancel" and disable the input and output dropdowns
@@ -51,8 +51,10 @@ def cancel_app():
     output_dropdown.setEnabled(True)
     reset_button.setEnabled(True)
 
-def update_status(status):
-    output_text.appendPlainText(status)
+def update_status():
+    while not app_is_closing:
+        status = status_queue.get()
+        output_text.appendPlainText(status)
 
 def reset_to_default():
     input_dropdown.setCurrentIndex(input_dropdown.findData(sd.default.device[0]))
@@ -101,6 +103,11 @@ def run_gui():
     window.show()
 
     app_is_closing = False
+
+    # Start the update_status thread
+    status_thread = Thread(target=update_status)
+    status_thread.start()
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":

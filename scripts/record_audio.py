@@ -2,7 +2,7 @@ import os
 import sounddevice as sd
 import numpy as np
 import wave
-import keyboard
+from pynput import keyboard
 import time
 import asyncio
 from dotenv import load_dotenv
@@ -18,7 +18,7 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-async def record_audio(input_device, status_callback=None):
+async def record_audio(input_device, status_queue=None):
     global is_recording
     # Initialize an empty list to store audio data
     audio_data = []
@@ -36,25 +36,34 @@ async def record_audio(input_device, status_callback=None):
     CHUNK = 1024
     WAVE_OUTPUT_FILENAME = os.path.join(output_directory, "output.wav")
 
-    # Create an input stream with the callback function
-    with sd.InputStream(samplerate=RATE, channels=CHANNELS, dtype=FORMAT, blocksize=CHUNK, callback=callback, device=input_device):
-            # Wait for the hotkey to be pressed
-            if status_callback:
-                status_callback(f"Press and hold the '{HOTKEY}' key to start recording")
+    # Define a function to handle key press events
+    def on_press(key):
+        if key == keyboard.KeyCode.from_char(HOTKEY):
+            global is_recording
+            is_recording = True
+            if status_queue:
+                status_queue.put(f"Recording started")
 
-            # Add this loop to wait for the HOTKEY press before starting the recording
-            while not keyboard.is_pressed(HOTKEY):
-                await asyncio.sleep(0.1)
-
-            # Record audio while the hotkey is pressed
-            if status_callback:
-                status_callback("Recording...")
-            while keyboard.is_pressed(HOTKEY):
-                is_recording = True
-                await asyncio.sleep(0.1)
+    # Define a function to handle key release events
+    def on_release(key):
+        if key == keyboard.KeyCode.from_char(HOTKEY):
+            global is_recording
             is_recording = False
-            if status_callback:
-                status_callback("Finished recording\n")
+            if status_queue:
+                status_queue.put(f"Recording stopped")
+            return False  # Stop the listener
+
+    with sd.InputStream(samplerate=RATE, channels=CHANNELS, dtype=FORMAT, blocksize=CHUNK, callback=callback, device=input_device):
+        # Wait for the hotkey to be pressed and released
+        if status_queue:
+            status_queue.put(f"Press and hold the '{HOTKEY}' key to start recording")
+
+        # Start a listener to detect key press and release events
+        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+            listener.join()
+
+        if status_queue:
+            status_queue.put("Finished recording\n")
 
     # Concatenate the recorded audio chunks
     audio_data = np.vstack(audio_data)

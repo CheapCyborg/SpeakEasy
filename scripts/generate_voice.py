@@ -12,11 +12,11 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
     
-def play_audio(wav_bytes, output_device):
+def play_audio(wav_bytes, output_device, status_queue=None):
     wav_obj = wave.open(io.BytesIO(wav_bytes), 'rb')
     n_channels, sampwidth, framerate, n_frames, comptype, compname = wav_obj.getparams()
     frames = wav_obj.readframes(n_frames)
-    
+
     # Convert bytes to int16 NumPy array
     audio_data = np.frombuffer(frames, dtype=np.int16)
     # Normalize the audio data to float32
@@ -25,19 +25,26 @@ def play_audio(wav_bytes, output_device):
     with sd.OutputStream(device=output_device, samplerate=framerate, channels=n_channels) as stream:
         stream.write(audio_data)
 
+    if status_queue:
+        status_queue.put("Finished playing audio\n")
 
-async def generate_waifu(translation, speaker=1, output_device=None, status_callback=None):
+async def generate_waifu(translation, speaker=1, output_device=None, status_queue=None):
     async with Client() as client:
+        if status_queue:
+            status_queue.put(f"Generating voice for: {translation}")
+
         audio_query = await client.create_audio_query(
             translation, speaker=speaker
         )
         wav_data = await audio_query.synthesis(speaker=speaker)
         with open(os.path.join(output_directory, "voice.wav"), "wb") as f:
             f.write(wav_data)
-        
-        if output_device is not None:
-            play_audio(wav_data, output_device)
-            
-        if status_callback:
-            status_callback(f"Generated voice for: {translation}")
-        
+
+        if output_device is None:
+            # If no output device is specified, use the default device
+            output_device = sd.default.device[1]
+
+        play_audio(wav_data, output_device, status_queue=status_queue)
+
+        if status_queue:
+            status_queue.put(f"Generated voice for: {translation}\n")

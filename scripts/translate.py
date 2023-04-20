@@ -14,7 +14,7 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-async def translate_text(transcription, target_lang="JA", status_callback=None):
+def translate_text(transcription, target_lang="JA", status_queue=None):
     # Translate the transcription
     translations = translator.translate_text(transcription, target_lang=target_lang)
 
@@ -24,7 +24,8 @@ async def translate_text(transcription, target_lang="JA", status_callback=None):
     # Write the translation to a text file
     with open(os.path.join(output_directory, "translation.txt"), "w", encoding='utf-8') as f:
         f.write(translation)
-        
-    if status_callback:
-        status_callback(f"Original: {transcription}\nTranslation: {translation}\n")
+
+    if status_queue:
+        status_queue.put(f"Original: {transcription}\nTranslation: {translation}\n")
+
     return translation
