@@ -26,7 +26,7 @@ def play_audio(wav_bytes, output_device):
         stream.write(audio_data)
 
 
-async def generate_waifu(translation, speaker=1, output_device=None):
+async def generate_waifu(translation, speaker=1, output_device=None, status_callback=None):
     async with Client() as client:
         audio_query = await client.create_audio_query(
             translation, speaker=speaker
@@ -37,5 +37,7 @@ async def generate_waifu(translation, speaker=1, output_device=None):
         
         if output_device is not None:
             play_audio(wav_data, output_device)
-
+            
+        if status_callback:
+            status_callback(f"Generated voice for: {translation}")
         

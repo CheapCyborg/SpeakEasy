@@ -1,41 +1,41 @@
 import os
 import sys
+import keyboard
 import asyncio
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from select_device import select_input_device, select_output_device
 from record_audio import record_audio
 from transcribe import transcribe
 from translate import translate_text
 from generate_voice import generate_waifu
 
-async def main():
-    # Run the select_device.py script to prompt the user to choose an input device
-    input_device = select_input_device()
+# main.py
 
-    # Run the record_audio.py script to record audio using the chosen input device
-    record_audio(input_device)
+# main.py
+async def main(input_device, output_device, is_running, status_callback=None):
+    while is_running():
+        # Run the record_audio.py script to record audio using the chosen input device
+        print("Starting record_audio")
+        await record_audio(input_device, status_callback=status_callback)
+        print("Finished record_audio")
 
-    # Get the transcription from the recorded audio
-    transcription = transcribe()
+        # Get the transcription from the recorded audio
+        print("Starting transcribe")
+        transcription = await transcribe()
+        print("Finished transcribe")
 
-    # Translate the transcription
-    translated_text = translate_text(transcription)
+        # Translate the transcription
+        print("Starting translate_text")
+        translated_text = await translate_text(transcription, status_callback=status_callback)
+        print("Finished translate_text")
 
-    # Prompt the user to ask if they would like to generate a waifu voice
-    while True:
-        user_input = input("Generate a waifu voice? (y/n): ")
-        if user_input.lower() == 'y':
-            # Select the output device
-            output_device = select_output_device()
-            # Generate voice from the translated text
-            await generate_waifu(translated_text, output_device=output_device)
+        # Generate voice from the translated text
+        print("Starting generate_waifu")
+        await generate_waifu(translated_text, output_device=output_device, status_callback=status_callback)
+        print("Finished generate_waifu")
+
+        # Check if the user wants to quit the application
+        if keyboard.is_pressed('q'):
+            print("Goodbye! 😊")
             break
-        elif user_input.lower() == 'n':
-            print("No anime girls for you, then! 😢")
-            break
-        else:
-            print("Invalid input. Enter 'y' or 'n'")
-
-asyncio.run(main())

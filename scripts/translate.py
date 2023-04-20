@@ -14,26 +14,17 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def translate_text(transcription, target_lang="JA"):
-    while True:
-        user_input = input("Translate the transcription? (y/n): ")
-        if user_input.lower() == 'y':
-            # Translate the transcription
-            translations = translator.translate_text(transcription, target_lang=target_lang)
+async def translate_text(transcription, target_lang="JA", status_callback=None):
+    # Translate the transcription
+    translations = translator.translate_text(transcription, target_lang=target_lang)
 
-            # Check if translations is a list or TextResult object
-            translation = translations[0].text if isinstance(translations, list) else translations.text
+    # Check if translations is a list or TextResult object
+    translation = translations[0].text if isinstance(translations, list) else translations.text
 
-            # Write the translation to a text file
-            with open(os.path.join(output_directory, "translation.txt"), "w", encoding='utf-8') as f:
-                f.write(translation)
-
-            print(f"\nOriginal: {transcription}")
-            print(f"Translation: {translation}")
-            break
-        elif user_input.lower() == 'n':
-            break
-        else:
-            print("Invalid input. Enter 'y' or 'n'")
-
+    # Write the translation to a text file
+    with open(os.path.join(output_directory, "translation.txt"), "w", encoding='utf-8') as f:
+        f.write(translation)
+        
+    if status_callback:
+        status_callback(f"Original: {transcription}\nTranslation: {translation}\n")
     return translation
