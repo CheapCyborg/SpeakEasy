@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 auth_key = os.getenv("DEEPL_API_KEY")
-translator = dl.Translator(auth_key)
 
 # Set the output directory path
 output_directory = "./tmp"
@@ -14,8 +13,8 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def translate_text(transcription, target_lang="JA", status_queue=None):
-    # Set the output directory path
+def translate_text(transcription, deepl_api_key, target_lang="JA", status_queue=None):
+    translator = dl.Translator(deepl_api_key)
     output_directory = "./tmp"
 
     # Create the output directory if it doesn't exist

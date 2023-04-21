@@ -33,7 +33,7 @@ async def generate_waifu(translation, speaker=1, output_device=None, status_queu
     try: 
         async with Client() as client:
             if status_queue:
-                status_queue.put(f"Generating voice for: {translation}")
+                status_queue.put(f"Attempting to generate voice...")
 
             audio_query = await client.create_audio_query(
                 translation, speaker=speaker
@@ -50,4 +50,4 @@ async def generate_waifu(translation, speaker=1, output_device=None, status_queu
             
     except httpx.HTTPError as e:
         if status_queue:
-            status_queue.put(f"httpx error: {e}\n")
+            status_queue.put(f"httpx error: {e} (Probably didn't start VoiceVox Engine)\n")

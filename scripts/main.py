@@ -16,14 +16,14 @@ from gui import app_is_closing
 
 #TODO: Handle errors in the main.py script and display them in the GUI instead of the console window
 
-async def main(input_device, output_device, status_queue=None, cancel_event=None):
+async def main(input_device, output_device, deepl_api_key, status_queue=None, cancel_event=None):
     while not (app_is_closing or (cancel_event and cancel_event.is_set())):
         
         await record_audio(input_device, status_queue=status_queue)
 
         transcription =  transcribe()
 
-        translated_text =  translate_text(transcription, status_queue=status_queue)
+        translated_text =  translate_text(transcription, deepl_api_key, status_queue=status_queue)
 
         await generate_waifu(translated_text, output_device=output_device, status_queue=status_queue)
 
