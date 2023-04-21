@@ -3,13 +3,29 @@ import main
 import asyncio
 import sounddevice as sd
 
-from threading import Thread
+from PySide6.QtCore import QObject, Signal, QRunnable, QThreadPool
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QComboBox, QPushButton, QPlainTextEdit
 from select_device import devices
 from queue import Queue
+from threading import Thread
+from asyncio import Event
+
+class AsyncRunner(QRunnable):
+    def __init__(self, func, *args):
+        super().__init__()
+        self.func = func
+        self.args = args
+
+    def run(self):
+        asyncio.run(self.func(*self.args))
+
+class StatusEmitter(QObject):
+    status_received = Signal(str)
 
 app_is_closing = False
 status_queue = Queue()
+cancel_event = Event()
+status_emitter = StatusEmitter()
 
 def populate_devices_dropdown(dropdown, device_type):
     default_device = sd.default.device[0] if device_type == "input" else sd.default.device[1]
@@ -24,16 +40,17 @@ def populate_devices_dropdown(dropdown, device_type):
     # Set the current index of the dropdown to the default device
     dropdown.setCurrentIndex(dropdown.findData(default_device))
     
-async def run_app_async(input_device, output_device):
-    await main.main(input_device, output_device, status_queue=status_queue)
+async def run_app_async(input_device, output_device, cancel_event):
+    await main.main(input_device, output_device, status_queue=status_queue, cancel_event=cancel_event)
+
 
 def run_app():
     input_device = input_dropdown.currentData()
     output_device = output_dropdown.currentData()
 
     # Run the main function asynchronously in a separate thread
-    thread = Thread(target=asyncio.run, args=(run_app_async(input_device, output_device),))
-    thread.start()
+    runner = AsyncRunner(run_app_async, input_device, output_device, cancel_event)
+    QThreadPool.globalInstance().start(runner)
 
     # Change the button text to "Cancel" and disable the input and output dropdowns
     start_button.setText("Cancel")
@@ -44,6 +61,7 @@ def run_app():
 def cancel_app():
     global app_is_closing
     app_is_closing = True
+    cancel_event.set()
 
     # Reset the button text and enable the input and output dropdowns
     start_button.setText("Start")
@@ -52,13 +70,18 @@ def cancel_app():
     reset_button.setEnabled(True)
 
 def update_status():
+    global app_is_closing
     while not app_is_closing:
         status = status_queue.get()
-        output_text.appendPlainText(status)
+        status_emitter.status_received.emit(status)
 
 def reset_to_default():
     input_dropdown.setCurrentIndex(input_dropdown.findData(sd.default.device[0]))
     output_dropdown.setCurrentIndex(output_dropdown.findData(sd.default.device[1]))
+    
+def on_status_received(status):
+    output_text.appendPlainText(status)
+
 
 def run_gui():
     global input_dropdown, output_dropdown, output_text, start_button, reset_button, window, app_is_closing
@@ -104,7 +127,7 @@ def run_gui():
 
     app_is_closing = False
 
-    # Start the update_status thread
+    status_emitter.status_received.connect(on_status_received)
     status_thread = Thread(target=update_status)
     status_thread.start()
 
