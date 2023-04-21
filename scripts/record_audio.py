@@ -59,6 +59,7 @@ async def record_audio(input_device, status_queue=None):
                 status_queue.put(f"Finished recording\n")
             recording_started = False
             return False  # Stop the listener
+
     try:
         with sd.InputStream(samplerate=RATE, channels=CHANNELS, dtype=FORMAT, blocksize=CHUNK, callback=callback, device=input_device):
             # Wait for the hotkey to be pressed and released
@@ -69,14 +70,20 @@ async def record_audio(input_device, status_queue=None):
             with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
                 listener.join()
 
-        # Concatenate the recorded audio chunks
-        audio_data = np.vstack(audio_data)
-        
-        if len(audio_data) < MIN_LENGTH * RATE:
-            if status_queue:
-                status_queue.put("Recording too short")
-            return False
+    except sd.PortAudioError as e:
+        if status_queue:
+            status_queue.put(f"Error with audio device: {e}")
+        return False
 
+    # Concatenate the recorded audio chunks
+    audio_data = np.vstack(audio_data)
+    
+    if len(audio_data) < MIN_LENGTH * RATE:
+        if status_queue:
+            status_queue.put("Recording too short")
+        return False
+
+    try:
         # Save the recorded audio to a WAV file
         with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
             wf.setnchannels(CHANNELS)
@@ -85,8 +92,8 @@ async def record_audio(input_device, status_queue=None):
             wf.writeframes(audio_data.tobytes())
             
         return True
-    
-    except Exception as e:
+
+    except IOError as e:
         if status_queue:
-            status_queue.put(f"Error: {e}")
+            status_queue.put(f"Error saving audio file: {e}")
         return False

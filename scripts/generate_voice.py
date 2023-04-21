@@ -4,6 +4,7 @@ import sounddevice as sd
 import io
 import numpy as np
 import wave
+import httpx
 
 # Set the output directory path
 output_directory = "./tmp" 
@@ -29,22 +30,24 @@ def play_audio(wav_bytes, output_device, status_queue=None):
         status_queue.put("Finished playing audio\n")
 
 async def generate_waifu(translation, speaker=1, output_device=None, status_queue=None):
-    async with Client() as client:
+    try: 
+        async with Client() as client:
+            if status_queue:
+                status_queue.put(f"Generating voice for: {translation}")
+
+            audio_query = await client.create_audio_query(
+                translation, speaker=speaker
+            )
+            wav_data = await audio_query.synthesis(speaker=speaker)
+            with open(os.path.join(output_directory, "voice.wav"), "wb") as f:
+                f.write(wav_data)
+
+            if output_device is None:
+                # If no output device is specified, use the default device
+                output_device = sd.default.device[1]
+
+            play_audio(wav_data, output_device, status_queue=status_queue)
+            
+    except httpx.HTTPError as e:
         if status_queue:
-            status_queue.put(f"Generating voice for: {translation}")
-
-        audio_query = await client.create_audio_query(
-            translation, speaker=speaker
-        )
-        wav_data = await audio_query.synthesis(speaker=speaker)
-        with open(os.path.join(output_directory, "voice.wav"), "wb") as f:
-            f.write(wav_data)
-
-        if output_device is None:
-            # If no output device is specified, use the default device
-            output_device = sd.default.device[1]
-
-        play_audio(wav_data, output_device, status_queue=status_queue)
-
-        if status_queue:
-            status_queue.put(f"Generated voice for: {translation}\n")
+            status_queue.put(f"httpx error: {e}\n")

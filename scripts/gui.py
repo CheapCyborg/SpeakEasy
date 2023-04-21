@@ -48,9 +48,13 @@ def run_app():
     input_device = input_dropdown.currentData()
     output_device = output_dropdown.currentData()
 
-    # Run the main function asynchronously in a separate thread
-    runner = AsyncRunner(run_app_async, input_device, output_device, cancel_event)
-    QThreadPool.globalInstance().start(runner)
+    try:
+        # Run the main function asynchronously in a separate thread
+        runner = AsyncRunner(run_app_async, input_device, output_device, cancel_event)
+        QThreadPool.globalInstance().start(runner)
+    except Exception as e:
+        status_queue.put(f"Error starting the application: {e}")
+        return
 
     # Change the button text to "Cancel" and disable the input and output dropdowns
     start_button.setText("Cancel")
@@ -72,8 +76,12 @@ def cancel_app():
 def update_status():
     global app_is_closing
     while not app_is_closing:
-        status = status_queue.get()
-        status_emitter.status_received.emit(status)
+        try:
+            status = status_queue.get()
+            status_emitter.status_received.emit(status)
+        except Exception as e:
+            status_queue.put(f"Error updating status: {e}")
+            return
 
 def reset_to_default():
     input_dropdown.setCurrentIndex(input_dropdown.findData(sd.default.device[0]))
@@ -86,8 +94,12 @@ def on_status_received(status):
 def run_gui():
     global input_dropdown, output_dropdown, output_text, start_button, reset_button, window, app_is_closing
 
-    app = QApplication(sys.argv)
-
+    try:
+        app = QApplication(sys.argv)
+    except Exception as e:
+        print(f"Error initializing the application: {e}")
+        return
+    
     window = QWidget()
     layout = QVBoxLayout()
 
@@ -131,7 +143,11 @@ def run_gui():
     status_thread = Thread(target=update_status)
     status_thread.start()
 
-    sys.exit(app.exec())
+    try:
+        sys.exit(app.exec())
+    except Exception as e:
+        print(f"Error running the application: {e}")
+        return
 
 if __name__ == "__main__":
     run_gui()
