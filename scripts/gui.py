@@ -39,12 +39,14 @@ def populate_devices_dropdown(dropdown, device_type):
 
     # Set the current index of the dropdown to the default device
     dropdown.setCurrentIndex(dropdown.findData(default_device))
-    
+
 async def run_app_async(input_device, output_device, deepl_api_key,cancel_event):
+    print("run_app_async() called")
     await main.main(input_device, output_device, deepl_api_key, status_queue=status_queue, cancel_event=cancel_event)
 
 
 def run_app():
+    print("run_app() called")
     input_device = input_dropdown.currentData()
     output_device = output_dropdown.currentData()
     deepl_api_key = deepl_api_key_input.text()
@@ -87,7 +89,7 @@ def update_status():
 def reset_to_default():
     input_dropdown.setCurrentIndex(input_dropdown.findData(sd.default.device[0]))
     output_dropdown.setCurrentIndex(output_dropdown.findData(sd.default.device[1]))
-    
+
 def on_status_received(status):
     output_text.appendPlainText(status)
 
@@ -99,7 +101,7 @@ def run_gui():
     except Exception as e:
         print(f"Error initializing the application: {e}")
         return
-    
+
     window = QWidget()
     layout = QVBoxLayout()
 
@@ -120,12 +122,12 @@ def run_gui():
     reset_button = QPushButton("Reset to Default")
     reset_button.clicked.connect(reset_to_default)
     layout.addWidget(reset_button)
-    
+
     deepl_api_key_label = QLabel("DeepL API Key:")
     layout.addWidget(deepl_api_key_label)
     deepl_api_key_input = QLineEdit()
     layout.addWidget(deepl_api_key_input)
-    
+
     #disable the start button until the user enters an API key for DeepL
     start_button = QPushButton("Start")
     start_button.clicked.connect(lambda: cancel_app() if start_button.text() == "Cancel" else run_app())
@@ -146,9 +148,9 @@ def run_gui():
             start_button.setEnabled(True)
         else:
             start_button.setEnabled(False)
-            
+
     deepl_api_key_input.textChanged.connect(check_api_key)
-    
+
     app_is_closing = False
 
     status_emitter.status_received.connect(on_status_received)
@@ -160,6 +162,6 @@ def run_gui():
     except Exception as e:
         print(f"Error running the application: {e}")
         return
-    
+
 if __name__ == "__main__":
     run_gui()

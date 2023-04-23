@@ -10,5 +10,6 @@ openai
 deepl
 voicevox-client
 pyside6
-pyside6-tools
+# pyside6-tools
 aiohttp
+pynput

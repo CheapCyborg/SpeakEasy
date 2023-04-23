@@ -19,12 +19,13 @@ if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
 async def record_audio(input_device, status_queue=None):
+    print("record_audio() called")
     global is_recording, recording_started
     # Initialize an empty list to store audio data
     audio_data = []
     is_recording = False
     recording_started = False
-    
+
     # Define a callback function to record audio
     def callback(indata, frames, time, status):
         if is_recording:
@@ -61,14 +62,18 @@ async def record_audio(input_device, status_queue=None):
             return False  # Stop the listener
 
     try:
+        print("Starting audio stream")
         with sd.InputStream(samplerate=RATE, channels=CHANNELS, dtype=FORMAT, blocksize=CHUNK, callback=callback, device=input_device):
+            print("Audio stream started")
             # Wait for the hotkey to be pressed and released
             if status_queue:
                 status_queue.put(f"Press and hold the '{HOTKEY}' key to start recording")
 
             # Start a listener to detect key press and release events
             with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+                print("Before listener.join()")
                 listener.join()
+                print("After listener.join()")
 
     except sd.PortAudioError as e:
         if status_queue:
@@ -77,7 +82,7 @@ async def record_audio(input_device, status_queue=None):
 
     # Concatenate the recorded audio chunks
     audio_data = np.vstack(audio_data)
-    
+
     if len(audio_data) < MIN_LENGTH * RATE:
         if status_queue:
             status_queue.put("Recording too short")
@@ -90,7 +95,7 @@ async def record_audio(input_device, status_queue=None):
             wf.setsampwidth(np.dtype(FORMAT).itemsize)
             wf.setframerate(RATE)
             wf.writeframes(audio_data.tobytes())
-            
+
         return True
 
     except IOError as e:
