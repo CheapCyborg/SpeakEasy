@@ -13,8 +13,8 @@ output_directory = "./tmp"
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def translate_text(transcription, deepl_api_key, target_lang="JA", status_queue=None):
-    translator = dl.Translator(deepl_api_key)
+def translate_text(transcription, target_lang="JA", status_queue=None):
+    translator = dl.Translator(auth_key)
     output_directory = "./tmp"
 
     # Create the output directory if it doesn't exist
@@ -22,15 +22,18 @@ def translate_text(transcription, deepl_api_key, target_lang="JA", status_queue=
         os.makedirs(output_directory)
 
     try:
-        # Translate the transcription
-        translations = translator.translate_text(transcription, target_lang=target_lang)
+        # Translate the text
+        translation = translator.translate_text(transcription, target_lang="JA").text
     except Exception as e:
         if status_queue:
-            status_queue.put(f"Error in translation: {e}")
+            status_queue.put(f"Error translating text: {e}")
         return None
-
-    # Check if translations is a list or TextResult object
-    translation = translations[0].text if isinstance(translations, list) else translations.text
+    
+    # Check if the translation is empty or if its an array
+    if not translation or isinstance(translation, list):
+        if status_queue:
+            status_queue.put(f"Empty translation: {translation}")
+        return None        
 
     try:
         # Write the translation to a text file

@@ -147,7 +147,7 @@ def run_gui():
         if deepl_api_key_input.text() != "":
             start_button.setEnabled(True)
         else:
-            start_button.setEnabled(False)
+            start_button.setEnabled(True)
 
     deepl_api_key_input.textChanged.connect(check_api_key)
 
