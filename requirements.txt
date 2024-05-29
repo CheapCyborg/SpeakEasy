@@ -13,4 +13,3 @@ pyside6
 # pyside6-tools
 aiohttp
 pynput
-//test
