@@ -11,94 +11,50 @@ load_dotenv()
 
 HOTKEY = os.getenv("HOTKEY")
 
-# Set the output directory path
 output_directory = "./tmp"
-
-# Create the output directory if it doesn't exist
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
+    
 
 async def record_audio(input_device, status_queue=None):
     print("record_audio() called")
     global is_recording, recording_started
-    # Initialize an empty list to store audio data
-    audio_data = []
+
     is_recording = False
     recording_started = False
-
-    # Define a callback function to record audio
-    def callback(indata, frames, time, status):
-        if is_recording:
-            audio_data.append(indata.copy())
-
-    # Set the recording parameters
-    FORMAT = np.int16
-    CHANNELS = 1
-    RATE = 44100
-    CHUNK = 1024
-    MIN_LENGTH = 0.1
-    WAVE_OUTPUT_FILENAME = os.path.join(output_directory, "output.wav")
-
-    # Define a function to handle key press events
+    
     def on_press(key):
-        if key == keyboard.KeyCode.from_char(HOTKEY):
-            global is_recording
-            global recording_started
-            is_recording = True
-            if not recording_started:
-                if status_queue:
-                    status_queue.put(f"Recording started")
+        global is_recording, recording_started
+        try:
+            if key.char == HOTKEY:
+                is_recording = True
                 recording_started = True
-
-    # Define a function to handle key release events
+        except AttributeError:
+            pass
+        
     def on_release(key):
-        if key == keyboard.KeyCode.from_char(HOTKEY):
-            global is_recording
-            global recording_started
-            is_recording = False
+        global is_recording
+        try:
+            if key.char == HOTKEY:
+                is_recording = False
+        except AttributeError:
+            pass
+        
+    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+        while not is_recording:
+            await asyncio.sleep(0.1)
+        print("Recording started")
+        if status_queue:
+            status_queue.put("Recording started\n")
+        frames = []
+        with sd.InputStream(device=input_device, channels=2, callback=callback):
+            while is_recording:
+                await asyncio.sleep(0.1)
+            print("Recording stopped")
             if status_queue:
-                status_queue.put(f"Finished recording\n")
-            recording_started = False
-            return False  # Stop the listener
-
-    try:
-        print("Starting audio stream")
-        with sd.InputStream(samplerate=RATE, channels=CHANNELS, dtype=FORMAT, blocksize=CHUNK, callback=callback, device=input_device):
-            print("Audio stream started")
-            # Wait for the hotkey to be pressed and released
-            if status_queue:
-                status_queue.put(f"Press and hold the '{HOTKEY}' key to start recording")
-
-            # Start a listener to detect key press and release events
-            with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-                print("Before listener.join()")
-                listener.join()
-                print("After listener.join()")
-
-    except sd.PortAudioError as e:
-        if status_queue:
-            status_queue.put(f"Error with audio device: {e}")
-        return False
-
-    # Concatenate the recorded audio chunks
-    audio_data = np.vstack(audio_data)
-
-    if len(audio_data) < MIN_LENGTH * RATE:
-        if status_queue:
-            status_queue.put("Recording too short")
-        return False
-
-    try:
-        # Save the recorded audio to a WAV file
-        with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(np.dtype(FORMAT).itemsize)
-            wf.setframerate(RATE)
-            wf.writeframes(audio_data.tobytes())
-
-        return True
-
-    except IOError as e:
-        if status_queue:
-            status_queue.put(f"Error saving audio file: {e}")
-        return False
+                status_queue.put("Recording stopped\n")
+            return frames
+    
+def callback(indata, frames, time, status):
+    frames.append(indata.copy())
+        

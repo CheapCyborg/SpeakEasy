@@ -6,13 +6,12 @@ import numpy as np
 import wave
 import httpx
 
-# Set the output directory path
-output_directory = "./tmp" 
+output_directory = "./tmp"
 
-# Create the output directory if it doesn't exist
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
-    
+
+
 def play_audio(wav_bytes, output_device, status_queue=None):
     wav_obj = wave.open(io.BytesIO(wav_bytes), 'rb')
     n_channels, sampwidth, framerate, n_frames, comptype, compname = wav_obj.getparams()
@@ -29,8 +28,9 @@ def play_audio(wav_bytes, output_device, status_queue=None):
     if status_queue:
         status_queue.put("Finished playing audio\n")
 
+
 async def generate_waifu(translation, speaker=1, output_device=None, status_queue=None):
-    try: 
+    try:
         async with Client() as client:
             if status_queue:
                 status_queue.put(f"Attempting to generate voice...")
@@ -43,11 +43,11 @@ async def generate_waifu(translation, speaker=1, output_device=None, status_queu
                 f.write(wav_data)
 
             if output_device is None:
-                # If no output device is specified, use the default device
                 output_device = sd.default.device[1]
 
             play_audio(wav_data, output_device, status_queue=status_queue)
-            
+
     except httpx.HTTPError as e:
         if status_queue:
-            status_queue.put(f"httpx error: {e} (Probably didn't start VoiceVox Engine)\n")
+            status_queue.put(
+                f"httpx error: {e} (Probably didn't start VoiceVox Engine)\n")
